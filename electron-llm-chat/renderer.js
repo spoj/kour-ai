@@ -1,5 +1,75 @@
 const { createApp, ref, nextTick, onMounted, watch } = Vue;
 
+const readFilePromise = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = (error) => reject(error);
+
+    const textExtensions = [
+      ".txt",
+      ".md",
+      ".csv",
+      ".js",
+      ".py",
+      ".html",
+      ".css",
+      ".json",
+      ".ts",
+      ".jsx",
+      ".tsx",
+      ".yaml",
+      ".yml",
+      ".xml",
+      "Dockerfile",
+    ];
+    const isTextFile =
+      textExtensions.some((ext) => file.name.endsWith(ext)) ||
+      file.type.startsWith("text/");
+
+    // Handle PDF files
+    if (file.type === "application/pdf") {
+      reader.onload = (e) => {
+        const base64PDF = e.target.result;
+        resolve({
+          type: "file",
+          file: { filename: file.name, file_data: base64PDF },
+        });
+      };
+      reader.readAsDataURL(file);
+
+      // Handle images
+    } else if (file.type.startsWith("image/")) {
+      reader.onload = (e) => {
+        resolve({
+          type: "image_url",
+          image_url: { url: e.target.result },
+        });
+      };
+      reader.readAsDataURL(file);
+
+      // Handle whitelisted text-based files
+    } else if (isTextFile) {
+      reader.onload = (e) => {
+        resolve({
+          type: "text",
+          text: `Content of "${file.name}" in base64 format: ${e.target.result}`,
+          isAttachment: true,
+        });
+      };
+      reader.readAsDataURL(file);
+
+      // Skip unsupported files
+    } else {
+      console.warn(
+        `Unsupported file type: ${file.type || "unknown"} for file ${
+          file.name
+        }. Skipping.`
+      );
+      resolve(null);
+    }
+  });
+};
+
 createApp({
   setup() {
     const chatHistory = ref([]);
@@ -82,75 +152,8 @@ createApp({
       }
 
       // 2. Process and add file parts
-      const filePromises = pastedFiles.value.map(
-        (file) =>
-          new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onerror = (error) => reject(error);
-
-            const textExtensions = [
-              ".txt",
-              ".md",
-              ".csv",
-              ".js",
-              ".py",
-              ".html",
-              ".css",
-              ".json",
-              ".ts",
-              ".jsx",
-              ".tsx",
-              ".yaml",
-              ".yml",
-              ".xml",
-              "Dockerfile",
-            ];
-            const isTextFile =
-              textExtensions.some((ext) => file.name.endsWith(ext)) ||
-              file.type.startsWith("text/");
-
-            // Handle PDF files
-            if (file.type === "application/pdf") {
-              reader.onload = (e) => {
-                const base64PDF = e.target.result;
-                resolve({
-                  type: "file",
-                  file: { filename: file.name, file_data: base64PDF },
-                });
-              };
-              reader.readAsDataURL(file);
-
-              // Handle images
-            } else if (file.type.startsWith("image/")) {
-              reader.onload = (e) => {
-                resolve({
-                  type: "image_url",
-                  image_url: { url: e.target.result },
-                });
-              };
-              reader.readAsDataURL(file);
-
-              // Handle whitelisted text-based files
-            } else if (isTextFile) {
-              reader.onload = (e) => {
-                resolve({
-                  type: "text",
-                  text: `Content of "${file.name}" in base64 format: ${e.target.result}`,
-                  isAttachment: true,
-                });
-              };
-              reader.readAsDataURL(file);
-
-              // Skip unsupported files
-            } else {
-              console.warn(
-                `Unsupported file type: ${file.type || "unknown"} for file ${
-                  file.name
-                }. Skipping.`
-              );
-              resolve(null);
-            }
-          })
+      const filePromises = pastedFiles.value.map((file) =>
+        readFilePromise(file)
       );
 
       try {
@@ -226,78 +229,7 @@ createApp({
       const files = event.target.files;
       console.log("files", files);
       if (files.length > 0) {
-        const vals = Array.from(files).map(
-          (file) =>
-            new Promise((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onerror = (error) => reject(error);
-
-              const textExtensions = [
-                ".txt",
-                ".md",
-                ".csv",
-                ".js",
-                ".py",
-                ".html",
-                ".css",
-                ".json",
-                ".ts",
-                ".jsx",
-                ".tsx",
-                ".yaml",
-                ".yml",
-                ".xml",
-                "Dockerfile",
-              ];
-              const isTextFile =
-                textExtensions.some((ext) => file.name.endsWith(ext)) ||
-                file.type.startsWith("text/");
-
-              // Handle PDF files
-              if (file.type === "application/pdf") {
-                reader.onload = (e) => {
-                  const base64PDF = e.target.result;
-                  resolve({
-                    type: "file",
-                    file: { filename: file.name, file_data: base64PDF },
-                  });
-                };
-                reader.readAsDataURL(file);
-
-                // Handle images
-              } else if (file.type.startsWith("image/")) {
-                reader.onload = (e) => {
-                  resolve({
-                    type: "image_url",
-                    image_url: { url: e.target.result },
-                  });
-                };
-                reader.readAsDataURL(file);
-
-                // Handle whitelisted text-based files
-              } else if (isTextFile) {
-                reader.onload = (e) => {
-                  resolve({
-                    type: "text",
-                    text: `Content of "${file.name}" in base64 format: ${e.target.result}`,
-                    isAttachment: true,
-                  });
-                };
-                reader.readAsDataURL(file);
-
-                // Skip unsupported files
-              } else {
-                console.warn(
-                  `Unsupported file type: ${file.type || "unknown"} for file ${
-                    file.name
-                  }. Skipping.`
-                );
-                resolve(null);
-              }
-            })
-        );
-
-        console.log("test", vals);
+        pastedFiles.value = [...pastedFiles.value, ...Array.from(files)];
       }
     };
 
