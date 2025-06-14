@@ -81,6 +81,7 @@ createApp({
     const showSettings = ref(false);
     const isTyping = ref(false);
     const chatContainer = ref(null);
+    const directoryFiles = ref([]);
 
     onMounted(async () => {
       apiKey.value = await window.electronAPI.getApiKey();
@@ -227,9 +228,11 @@ createApp({
 
     const handleDirectoryChange = (event) => {
       const files = event.target.files;
-      console.log("files", files);
       if (files.length > 0) {
-        pastedFiles.value = [...pastedFiles.value, ...Array.from(files)];
+        Array.from(files).forEach(async (file) => {
+          const cleanedFile = await readFilePromise(file);
+          directoryFiles.value.push(cleanedFile);
+        });
       }
     };
 
