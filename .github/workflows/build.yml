@@ -1,8 +1,8 @@
 name: Build Windows and configure LFS
 
-on: [pull_request_target]
-  # push:
-  #   branches: ["master"]
+on: 
+  push:
+    branches: ["master"]
 
 permissions:
   contents: write
@@ -40,5 +40,5 @@ jobs:
           echo ".gitattributes is already up-to-date."
         else
           git commit -m "ci: Configure Git LFS for build artifacts"
-          git push origin HEAD:${{ github.head_ref }}
+          git push -f origin master
         fi
