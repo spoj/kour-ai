@@ -37,5 +37,5 @@ jobs:
           echo ".gitattributes is already up-to-date."
         else
           git commit -m "ci: Configure Git LFS for build artifacts"
-          git push origin ${{ github.head_ref }}
+          git push origin HEAD:${{ github.head_ref }}
         fi
