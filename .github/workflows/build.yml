@@ -31,6 +31,6 @@ jobs:
           git lfs install
           git lfs track "dist/make/**"
           git fetch
-          git add .gitatttributes
+          git add .gitattributes
           git commit -m "Add build file tracking"
           git push -f origin build
