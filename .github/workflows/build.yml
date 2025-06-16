@@ -25,6 +25,7 @@ jobs:
       run: npm run make -- --platform=win32
 
     - name: Setup Git LFS tracking
+      shell: bash
       run: |
         git config --global user.name 'github-actions'
         git config --global user.email 'github-actions@github.com'
