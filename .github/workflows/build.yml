@@ -30,7 +30,6 @@ jobs:
           git config --global user.email 'github-actions@github.com'
           git lfs install
           git lfs track "dist/make/**"
-          git add .gitattributes
           git fetch
           git add .gitatttributes
           git commit -m "Add build file tracking"
