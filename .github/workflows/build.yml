@@ -1,37 +1,37 @@
 name: Build Windows
 
-on:
-  push:
-    branches: [ "master" ]
+on: [pull_request]
+  # push:
+  #   branches: ["master"]
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
 
-    - name: Use Node.js 20
-      uses: actions/setup-node@v3
-      with:
-        node-version: 20
+      - name: Use Node.js 22
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22
 
-    - name: Install dependencies
-      run: npm install
+      - name: Install dependencies
+        run: npm install
 
-    - name: Build windows
-      run: npm run make -- --platform=win32
+      - name: Build windows
+        run: npm run make -- --platform=win32
 
-    - name: Organize build files
-      run: |
-        mkdir build
-        move dist\make\* build\
-    - name: Commit files
-      run: |
-        git config --global user.name 'github-actions'
-        git config --global user.email 'github-actions@github.com'
-        git fetch
-        git checkout -b build
-        git add -f build
-        git commit -m "Add build files"
-        git push -f origin build
+      - name: Commit files
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+          git lfs install
+          git lfs track "dist/**"
+          git add .gitattributes
+          git fetch
+          git add .gitatttributes
+          git commit -m "Add build file tracking"
+          git push -f origin build
