@@ -29,7 +29,7 @@ jobs:
           git config --global user.name 'github-actions'
           git config --global user.email 'github-actions@github.com'
           git lfs install
-          git lfs track "dist/**"
+          git lfs track "dist/make/**"
           git add .gitattributes
           git fetch
           git add .gitatttributes
