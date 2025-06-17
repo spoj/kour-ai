@@ -1,26 +1,30 @@
-import fs from 'fs';
-import path from 'path';
-import { fileTypeFromBuffer } from 'file-type';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import ExcelJS from 'exceljs';
-import os from 'os';
-import crypto from 'crypto';
-import { processXlsxInWorker } from './xlsxWorker.js';
+import fs from "fs";
+import path from "path";
+import { fileTypeFromBuffer } from "file-type";
+import { exec } from "child_process";
+import { promisify } from "util";
+import os from "os";
+import crypto from "crypto";
+import { processXlsxInWorker } from "./xlsxWorker.js";
 
 const execAsync = promisify(exec);
 
 // Internal helper function to get the cache path. Not exported.
-function _getCachePathInternal(fileBuffer, originalExtension, targetExtension, context) {
-    const { appDataDir } = context;
-    if (!appDataDir) return null;
+function _getCachePathInternal(
+  fileBuffer,
+  originalExtension,
+  targetExtension,
+  context
+) {
+  const { appDataDir } = context;
+  if (!appDataDir) return null;
 
-    const hash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
-    const cacheDir = path.join(appDataDir, 'coworker', 'conversion_cache');
-    const subDir = hash.substring(0, 2);
-    const cacheFileName = `${hash.substring(2)}.${targetExtension}`;
+  const hash = crypto.createHash("sha256").update(fileBuffer).digest("hex");
+  const cacheDir = path.join(appDataDir, "coworker", "conversion_cache");
+  const subDir = hash.substring(0, 2);
+  const cacheFileName = `${hash.substring(2)}.${targetExtension}`;
 
-    return path.join(cacheDir, subDir, cacheFileName);
+  return path.join(cacheDir, subDir, cacheFileName);
 }
 
 /**
@@ -32,11 +36,11 @@ function _getCachePathInternal(fileBuffer, originalExtension, targetExtension, c
  * @returns {Promise<Buffer|null>} The buffer of the cached converted file, or null if not found.
  */
 async function readConversionCache(fileBuffer, fromExt, toExt, context) {
-    const cachePath = _getCachePathInternal(fileBuffer, fromExt, toExt, context);
-    if (cachePath && fs.existsSync(cachePath)) {
-        return fs.promises.readFile(cachePath);
-    }
-    return null;
+  const cachePath = _getCachePathInternal(fileBuffer, fromExt, toExt, context);
+  if (cachePath && fs.existsSync(cachePath)) {
+    return fs.promises.readFile(cachePath);
+  }
+  return null;
 }
 
 /**
@@ -47,302 +51,358 @@ async function readConversionCache(fileBuffer, fromExt, toExt, context) {
  * @param {string} toExt The target file extension of the converted file.
  * @param {object} context The tool context.
  */
-async function writeConversionCache(origFileBuffer, fromExt, convertedFileBuf, toExt, context) {
-    const cachePath = _getCachePathInternal(origFileBuffer, fromExt, toExt, context);
-    if (cachePath) {
-        await fs.promises.mkdir(path.dirname(cachePath), { recursive: true });
-        await fs.promises.writeFile(cachePath, convertedFileBuf);
-    }
+async function writeConversionCache(
+  origFileBuffer,
+  fromExt,
+  convertedFileBuf,
+  toExt,
+  context
+) {
+  const cachePath = _getCachePathInternal(
+    origFileBuffer,
+    fromExt,
+    toExt,
+    context
+  );
+  if (cachePath) {
+    await fs.promises.mkdir(path.dirname(cachePath), { recursive: true });
+    await fs.promises.writeFile(cachePath, convertedFileBuf);
+  }
 }
-
 
 // --- Custom Error Classes ---
 export class SecurityError extends Error {
   constructor(message) {
     super(message);
-    this.name = 'SecurityError';
+    this.name = "SecurityError";
   }
 }
 
 export class NotFoundError extends Error {
   constructor(message) {
     super(message);
-    this.name = 'NotFoundError';
+    this.name = "NotFoundError";
   }
 }
 
 export class ConfigurationError extends Error {
-    constructor(message) {
-      super(message);
-      this.name = 'ConfigurationError';
-    }
+  constructor(message) {
+    super(message);
+    this.name = "ConfigurationError";
+  }
 }
 
 export class UnsupportedFileTypeError extends Error {
-    constructor(message) {
-        super(message);
-        this.name = 'UnsupportedFileTypeError';
-    }
+  constructor(message) {
+    super(message);
+    this.name = "UnsupportedFileTypeError";
+  }
 }
-
 
 // --- Core Functions ---
 
 export async function safelyReadFile(filePath, context) {
   const { rootDir } = context;
   if (!rootDir) {
-    throw new ConfigurationError('Root directory is not specified.');
+    throw new ConfigurationError("Root directory is not specified.");
   }
 
   const resolvedFilePath = path.resolve(filePath);
   const resolvedRootDir = path.resolve(rootDir);
 
   if (!resolvedFilePath.startsWith(resolvedRootDir)) {
-    throw new SecurityError(`Access denied. Path '${path.basename(filePath)}' is outside of the root directory.`);
+    throw new SecurityError(
+      `Access denied. Path '${path.basename(
+        filePath
+      )}' is outside of the root directory.`
+    );
   }
 
   if (!fs.existsSync(resolvedFilePath)) {
     throw new NotFoundError(`File not found: ${path.basename(filePath)}`);
   }
-  
+
   // Check file size
   const stats = await fs.promises.stat(resolvedFilePath);
   const maxFileSize = 50 * 1024 * 1024; // 50MB limit
   if (stats.size > maxFileSize) {
-      throw new Error(`File too large (${(stats.size / 1024 / 1024).toFixed(2)}MB). Maximum size is 50MB.`);
+    throw new Error(
+      `File too large (${(stats.size / 1024 / 1024).toFixed(
+        2
+      )}MB). Maximum size is 50MB.`
+    );
   }
 
   return fs.promises.readFile(resolvedFilePath);
 }
 
 export async function determineFileType(buffer, filePath) {
-    let fileTypeResult = await fileTypeFromBuffer(buffer);
-    if (!fileTypeResult) {
-        // Fallback for text-based files without magic numbers
-        const content = buffer.toString('utf-8');
-        if (!content.includes('\uFFFD')) { // Check for binary gibberish
-            return { mime: 'text/plain', ext: 'txt' };
-        }
+  let fileTypeResult = await fileTypeFromBuffer(buffer);
+  if (!fileTypeResult) {
+    // Fallback for text-based files without magic numbers
+    const content = buffer.toString("utf-8");
+    if (!content.includes("\uFFFD")) {
+      // Check for binary gibberish
+      return { mime: "text/plain", ext: "txt" };
     }
-    // Add extension for fallback if mime type is ambiguous
-    if (fileTypeResult && !fileTypeResult.ext) {
-      fileTypeResult.ext = path.extname(filePath).substring(1);
-    }
-    return fileTypeResult;
+  }
+  // Add extension for fallback if mime type is ambiguous
+  if (fileTypeResult && !fileTypeResult.ext) {
+    fileTypeResult.ext = path.extname(filePath).substring(1);
+  }
+  return fileTypeResult;
 }
 
 export async function convertToPdf(buffer, fileExtension, context) {
-    const cachedBuffer = await readConversionCache(buffer, fileExtension, 'pdf', context);
-    if (cachedBuffer) {
-        return cachedBuffer;
+  const cachedBuffer = await readConversionCache(
+    buffer,
+    fileExtension,
+    "pdf",
+    context
+  );
+  if (cachedBuffer) {
+    return cachedBuffer;
+  }
+
+  const { sofficePath } = context;
+  if (!sofficePath) {
+    throw new ConfigurationError(
+      `${fileExtension.toUpperCase()} files are not supported. Please configure LibreOffice (soffice.com) path in settings.`
+    );
+  }
+
+  const tempDir = os.tmpdir();
+  const tempFilePath = path.join(
+    tempDir,
+    `tempfile_${Date.now()}.${fileExtension}`
+  );
+  await fs.promises.writeFile(tempFilePath, buffer);
+
+  try {
+    const command = `"${sofficePath}" --headless --convert-to pdf --outdir "${tempDir}" "${tempFilePath}"`;
+    await execAsync(command);
+
+    const pdfFileName =
+      path.basename(tempFilePath, `.${fileExtension}`) + ".pdf";
+    const pdfPath = path.join(tempDir, pdfFileName);
+
+    if (!fs.existsSync(pdfPath)) {
+      throw new Error("PDF conversion failed: output file not found.");
     }
 
-    const { sofficePath } = context;
-    if (!sofficePath) {
-        throw new ConfigurationError(`${fileExtension.toUpperCase()} files are not supported. Please configure LibreOffice (soffice.com) path in settings.`);
-    }
+    const pdfBuffer = await fs.promises.readFile(pdfPath);
 
-    const tempDir = os.tmpdir();
-    const tempFilePath = path.join(tempDir, `tempfile_${Date.now()}.${fileExtension}`);
-    await fs.promises.writeFile(tempFilePath, buffer);
+    await writeConversionCache(
+      buffer,
+      fileExtension,
+      pdfBuffer,
+      "pdf",
+      context
+    );
 
-    try {
-        const command = `"${sofficePath}" --headless --convert-to pdf --outdir "${tempDir}" "${tempFilePath}"`;
-        await execAsync(command);
-        
-        const pdfFileName = path.basename(tempFilePath, `.${fileExtension}`) + '.pdf';
-        const pdfPath = path.join(tempDir, pdfFileName);
-
-        if (!fs.existsSync(pdfPath)) {
-            throw new Error('PDF conversion failed: output file not found.');
-        }
-
-        const pdfBuffer = await fs.promises.readFile(pdfPath);
-        
-        await writeConversionCache(buffer, fileExtension, pdfBuffer, 'pdf', context);
-
-        return pdfBuffer;
-    } finally {
-        const pdfFileName = path.basename(tempFilePath, `.${fileExtension}`) + '.pdf';
-        const pdfPath = path.join(tempDir, pdfFileName);
-        if (fs.existsSync(tempFilePath)) await fs.promises.unlink(tempFilePath);
-        if (fs.existsSync(pdfPath)) await fs.promises.unlink(pdfPath);
-    }
+    return pdfBuffer;
+  } finally {
+    const pdfFileName =
+      path.basename(tempFilePath, `.${fileExtension}`) + ".pdf";
+    const pdfPath = path.join(tempDir, pdfFileName);
+    if (fs.existsSync(tempFilePath)) await fs.promises.unlink(tempFilePath);
+    if (fs.existsSync(pdfPath)) await fs.promises.unlink(pdfPath);
+  }
 }
 
 export async function extractTextFromSpreadsheet(buffer, context) {
-    const cachedBuffer = await readConversionCache(buffer, 'xlsx', 'csv', context);
-    if (cachedBuffer) {
-        return cachedBuffer.toString('utf-8');
-    }
-    
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
-    
-    let fullText = '';
-    
-    workbook.eachSheet((worksheet, sheetId) => {
-        const sheetName = worksheet.name;
-        fullText += `Sheet: ${sheetName}\n\n`;
-        
-        const csvRows = [];
-        worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
-            const csvCells = [];
-            row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-                const value = cell.value;
-                let cellText = '';
-                
-                if (value === null || value === undefined) {
-                    cellText = '';
-                } else if (typeof value === 'object') {
-                    if (value.formula) {
-                        cellText = value.result?.toString() || '';
-                    } else if (value.hyperlink) {
-                        cellText = value.text || value.hyperlink;
-                    } else if (value.richText && Array.isArray(value.richText)) {
-                        cellText = value.richText.map(rt => rt.text || '').join('');
-                    } else if (value.error) {
-                        cellText = `#${value.error}`;
-                    } else if (value instanceof Date) {
-                        cellText = value.toISOString().split('T')[0];
-                    } else if (value.text !== undefined) {
-                        cellText = value.text.toString();
-                    } else if (value.result !== undefined) {
-                        cellText = value.result.toString();
-                    } else {
-                        cellText = JSON.stringify(value);
-                    }
-                } else {
-                    cellText = value.toString();
-                }
-                
-                if (cellText.includes(',') || cellText.includes('"') || cellText.includes('\n')) {
-                    cellText = `"${cellText.replace(/"/g, '""')}"`;
-                }
-                csvCells.push(cellText);
-            });
-            csvRows.push(csvCells.join(','));
-        });
-        
-        fullText += csvRows.join('\n') + '\n\n';
-    });
+  const cachedBuffer = await readConversionCache(
+    buffer,
+    "xlsx",
+    "csv",
+    context
+  );
+  if (cachedBuffer) {
+    return cachedBuffer.toString("utf-8");
+  }
 
-    await writeConversionCache(buffer, 'xlsx', Buffer.from(fullText, 'utf-8'), 'csv', context);
+  const fullText = await processXlsxInWorker(buffer);
 
-    return fullText;
+  await writeConversionCache(
+    buffer,
+    "xlsx",
+    Buffer.from(fullText, "utf-8"),
+    "csv",
+    context
+  );
+
+  return fullText;
 }
-
 
 // --- High-Level Abstractions ---
 
 const WELL_KNOWN_TEXT_EXTENSIONS = [
-    // Data formats
-    'csv', 'tsv', 'json', 'xml', 'yaml', 'toml', 'ini',
-    // Plain text & docs
-    'txt', 'md', 'log', 'rst',
-    // Web
-    'html', 'css', 'js', 'jsx', 'ts', 'tsx', 'vue',
-    // Scripting & Backend
-    'py', 'rb', 'php', 'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'go', 'swift',
-    'kt', 'kts', 'scala', 'sh', 'bat', 'ps1', 'pl', 'sql'
+  // Data formats
+  "csv",
+  "tsv",
+  "json",
+  "xml",
+  "yaml",
+  "toml",
+  "ini",
+  // Plain text & docs
+  "txt",
+  "md",
+  "log",
+  "rst",
+  // Web
+  "html",
+  "css",
+  "js",
+  "jsx",
+  "ts",
+  "tsx",
+  "vue",
+  // Scripting & Backend
+  "py",
+  "rb",
+  "php",
+  "java",
+  "c",
+  "cpp",
+  "h",
+  "hpp",
+  "cs",
+  "go",
+  "swift",
+  "kt",
+  "kts",
+  "scala",
+  "sh",
+  "bat",
+  "ps1",
+  "pl",
+  "sql",
 ];
 
 export async function processFileBufferForLLM(fileBuffer, filename, context) {
-    const fileType = await determineFileType(fileBuffer, filename);
+  const fileType = await determineFileType(fileBuffer, filename);
 
-    if (!fileType) {
-        throw new UnsupportedFileTypeError("Unsupported file type or file appears to be binary.");
-    }
-    
-    // Handle Images
-    if (fileType.mime.startsWith('image/')) {
-        const fileContent = fileBuffer.toString('base64');
-        return {
-            type: 'image',
-            mime: fileType.mime,
-            content: fileContent,
-            filename: filename,
-        };
-    }
-    
-    // Handle PDF directly
-    if (fileType.mime === 'application/pdf') {
-         const fileContent = fileBuffer.toString("base64");
-         return {
-            type: 'pdf',
-            mime: fileType.mime,
-            content: fileContent,
-            filename: filename,
-        };
-    }
+  if (!fileType) {
+    throw new UnsupportedFileTypeError(
+      "Unsupported file type or file appears to be binary."
+    );
+  }
 
-    // Handle Office Docs (DOCX, PPTX) by converting to PDF
-    const officeMimes = {
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx'
+  // Handle Images
+  if (fileType.mime.startsWith("image/")) {
+    const fileContent = fileBuffer.toString("base64");
+    return {
+      type: "image",
+      mime: fileType.mime,
+      content: fileContent,
+      filename: filename,
     };
-    if (officeMimes[fileType.mime] || fileType.ext === 'docx' || fileType.ext === 'pptx') {
-        const ext = officeMimes[fileType.mime] || fileType.ext;
-        const pdfBuffer = await convertToPdf(fileBuffer, ext, context);
-        const pdfContent = pdfBuffer.toString("base64");
-        return {
-            type: 'pdf',
-            mime: 'application/pdf',
-            content: pdfContent,
-            filename: filename,
-            originalExtension: ext
-        };
-    }
+  }
 
-    // Handle Spreadsheets
-    const spreadsheetMimes = [
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-        'application/vnd.ms-excel' // .xls
-    ];
-    if (spreadsheetMimes.includes(fileType.mime) || fileType.ext === 'xlsx' || fileType.ext === 'xls') {
-        const textContent = await extractTextFromSpreadsheet(fileBuffer, context);
-        return {
-            type: 'text',
-            content: textContent,
-            filename: filename,
-            isSpreadsheet: true
-        };
-    }
-    
-    // Handle well-known text-based files by extension
-    const fileExtension = path.extname(filename).substring(1).toLowerCase();
-    if (WELL_KNOWN_TEXT_EXTENSIONS.includes(fileExtension)) {
-        const textContent = fileBuffer.toString('utf-8');
-        return {
-            type: 'text',
-            content: textContent,
-            filename: filename,
-        };
-    }
-    
-    throw new UnsupportedFileTypeError(`Unsupported file type: ${fileType.mime || 'unknown'} or extension: .${fileExtension}`);
+  // Handle PDF directly
+  if (fileType.mime === "application/pdf") {
+    const fileContent = fileBuffer.toString("base64");
+    return {
+      type: "pdf",
+      mime: fileType.mime,
+      content: fileContent,
+      filename: filename,
+    };
+  }
+
+  // Handle Office Docs (DOCX, PPTX) by converting to PDF
+  const officeMimes = {
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+      "docx",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+      "pptx",
+  };
+  if (
+    officeMimes[fileType.mime] ||
+    fileType.ext === "docx" ||
+    fileType.ext === "pptx"
+  ) {
+    const ext = officeMimes[fileType.mime] || fileType.ext;
+    const pdfBuffer = await convertToPdf(fileBuffer, ext, context);
+    const pdfContent = pdfBuffer.toString("base64");
+    return {
+      type: "pdf",
+      mime: "application/pdf",
+      content: pdfContent,
+      filename: filename,
+      originalExtension: ext,
+    };
+  }
+
+  // Handle Spreadsheets
+  const spreadsheetMimes = [
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
+    "application/vnd.ms-excel", // .xls
+  ];
+  if (
+    spreadsheetMimes.includes(fileType.mime) ||
+    fileType.ext === "xlsx" ||
+    fileType.ext === "xls"
+  ) {
+    const textContent = await extractTextFromSpreadsheet(fileBuffer, context);
+    return {
+      type: "text",
+      content: textContent,
+      filename: filename,
+      isSpreadsheet: true,
+    };
+  }
+
+  // Handle well-known text-based files by extension
+  const fileExtension = path.extname(filename).substring(1).toLowerCase();
+  if (WELL_KNOWN_TEXT_EXTENSIONS.includes(fileExtension)) {
+    const textContent = fileBuffer.toString("utf-8");
+    return {
+      type: "text",
+      content: textContent,
+      filename: filename,
+    };
+  }
+
+  throw new UnsupportedFileTypeError(
+    `Unsupported file type: ${
+      fileType.mime || "unknown"
+    } or extension: .${fileExtension}`
+  );
 }
 
 export async function getFileContentForLLM(filePath, context) {
-    const fileBuffer = await safelyReadFile(filePath, context);
-    const filename = path.basename(filePath);
-    return await processFileBufferForLLM(fileBuffer, filename, context);
+  const fileBuffer = await safelyReadFile(filePath, context);
+  const filename = path.basename(filePath);
+  return await processFileBufferForLLM(fileBuffer, filename, context);
 }
 export async function safelyReadDir(dirPath, context) {
   const { rootDir } = context;
   if (!rootDir) {
-    throw new ConfigurationError('Root directory is not specified.');
+    throw new ConfigurationError("Root directory is not specified.");
   }
 
   const resolvedDirPath = path.resolve(dirPath);
   const resolvedRootDir = path.resolve(rootDir);
 
   if (!resolvedDirPath.startsWith(resolvedRootDir)) {
-    throw new SecurityError(`Access denied. Path '${path.basename(dirPath)}' is outside of the root directory.`);
+    throw new SecurityError(
+      `Access denied. Path '${path.basename(
+        dirPath
+      )}' is outside of the root directory.`
+    );
   }
 
-  if (!fs.existsSync(resolvedDirPath) || !fs.statSync(resolvedDirPath).isDirectory()) {
-    throw new NotFoundError(`Directory not found or path is not a directory: ${path.basename(dirPath)}`);
+  if (
+    !fs.existsSync(resolvedDirPath) ||
+    !fs.statSync(resolvedDirPath).isDirectory()
+  ) {
+    throw new NotFoundError(
+      `Directory not found or path is not a directory: ${path.basename(
+        dirPath
+      )}`
+    );
   }
 
   const items = fs.readdirSync(resolvedDirPath).map((item) => {
@@ -355,13 +415,17 @@ export async function safelyReadDir(dirPath, context) {
 export async function safelyWriteFile(filePath, content, context) {
   const { rootDir } = context;
   if (!rootDir) {
-    throw new ConfigurationError('Root directory is not specified.');
+    throw new ConfigurationError("Root directory is not specified.");
   }
   const resolvedFilePath = path.resolve(filePath);
   const resolvedRootDir = path.resolve(rootDir);
 
   if (!resolvedFilePath.startsWith(resolvedRootDir)) {
-    throw new SecurityError(`Access denied. Path '${path.basename(filePath)}' is outside of the root directory.`);
+    throw new SecurityError(
+      `Access denied. Path '${path.basename(
+        filePath
+      )}' is outside of the root directory.`
+    );
   }
 
   // Ensure the directory exists

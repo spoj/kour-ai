@@ -201,14 +201,6 @@ ipcMain.handle("send-message", async (event, { messages }) => {
         );
 
         if (toolResult && toolResult.is_file_viewer) {
-          // This is a result from load_file, handle it specially
-          // Add the content message to history.
-          history.push({
-            role: toolResult.role,
-            content: toolResult.content,
-            is_file_viewer: true
-          });
-
           // Also add a simplified success message for the tool call itself
           // to let the model know the tool executed correctly.
           history.push({
@@ -219,6 +211,14 @@ ipcMain.handle("send-message", async (event, { messages }) => {
               success: true,
               message: `File loaded into context.`,
             }),
+          });
+
+          // This is a result from load_file, handle it specially
+          // Add the content message to history.
+          history.push({
+            role: toolResult.role,
+            content: toolResult.content,
+            is_file_viewer: true,
           });
         } else {
           // This is a regular tool result
@@ -234,7 +234,8 @@ ipcMain.handle("send-message", async (event, { messages }) => {
   } catch (error) {
     logToRenderer({ type: "API_ERROR", data: error });
     throw new Error(
-      `API Error: ${error.message || "Could not get a response from the model."
+      `API Error: ${
+        error.message || "Could not get a response from the model."
       }`
     );
   }
