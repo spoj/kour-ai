@@ -47,6 +47,10 @@ h1 {
   color: white;
   font-size: 24px;
   cursor: pointer;
+  transition: transform 0.5s ease-in-out;
+}
+#settings-button:hover {
+  transform: rotate(360deg);
 }
 #chat-container {
   flex-grow: 1;
