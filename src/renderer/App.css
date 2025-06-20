@@ -1,0 +1,109 @@
+body,
+#root {
+  height: 100vh;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  background-color: #f0f2f5;
+  color: #333;
+}
+
+#root {
+  background-color: #fff;
+  width: 100%;
+  flex: 1;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #1c65e9;
+  color: white;
+  /* width: 100%; */
+}
+h1 {
+  margin: 0 20px 0 0;
+  font-size: 20px;
+}
+#path-input {
+  /* width: 80%; */
+  flex-grow: 1;
+  background-color: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 5px;
+  color: white;
+  padding: 5px 10px;
+  font-size: 14px;
+}
+#path-input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+#settings-button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 12px;
+  cursor: pointer;
+  transition: transform 0.5s ease-in-out;
+  margin-right: 5px;
+}
+#settings-button:hover {
+  transform: rotate(360deg);
+}
+#chat-container {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 20px;
+  height: 100%;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+#input-container {
+  display: flex;
+  padding: 10px;
+  border-top: 1px solid #ddd;
+  align-items: flex-end;
+}
+#message-input {
+  font-family: inherit;
+  flex-grow: 1;
+  border: 1px solid #ccc;
+  border-radius: 18px;
+  padding: 10px 15px;
+  font-size: 14px;
+  resize: none;
+  overflow-y: auto;
+  max-height: 120px;
+  box-sizing: border-box;
+  height: 40px;
+  line-height: 18px;
+}
+#send-button {
+  background-color: hsl(219, 82%, 51%);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+  margin-left: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+#send-button:hover {
+  background-color: hsl(219, 82%, 45%);
+}
