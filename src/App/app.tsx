@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
-import { ChatBubble, SettingsModal } from "../components";
+import { SettingsModal, IMessage, ChatBubble } from "../components";
 import "./app.css";
-import { IMessage } from "../components/components";
 
 export const App = () => {
   const [openSettingsModal, setOpenSettingsModal] = useState(false);
@@ -12,8 +11,7 @@ export const App = () => {
 
   const handleSendMessage = async () => {
     if (message.trim()) {
-      const userMessage: IMessage = { role: 'user', content: message };
-      const newChatHistory = [...chatHistory, userMessage];
+      const newChatHistory = [...chatHistory, { role: 'user', content: message } as IMessage];
       setChatHistory(newChatHistory);
       setMessage('');
 
@@ -41,7 +39,7 @@ export const App = () => {
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
+    if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       handleSendMessage();
     }
