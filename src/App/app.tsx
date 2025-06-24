@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { SettingsModal, IMessage, ChatBubble } from "../components";
 import "./app.css";
+import { chatCompletion } from "../helpers";
 
 export const App = () => {
   const [openSettingsModal, setOpenSettingsModal] = useState(false);
@@ -11,30 +12,14 @@ export const App = () => {
 
   const handleSendMessage = async () => {
     if (message.trim()) {
-      const newChatHistory = [...chatHistory, { role: 'user', content: message } as IMessage];
+      const newChatHistory = [
+        ...chatHistory,
+        { role: "user", content: message } as IMessage,
+      ];
       setChatHistory(newChatHistory);
-      setMessage('');
+      setMessage("");
 
-      const settings = window.electron.getSettings();
-
-      window.electron.chatCompletion({
-        apiKey: settings.apiKey,
-        modelName: settings.modelName,
-        messages: newChatHistory.map((m: IMessage) => ({ role: m.role, content: m.content })),
-      }, (update) => {
-        if (update.type === 'start') {
-          setIsTyping(true);
-        } else if (update.type === 'end') {
-          setIsTyping(false);
-        } else if (update.type === 'update') {
-          const botMessage: IMessage = {
-            role: 'assistant',
-            content: update.message,
-            isNotification: update.isNotification,
-          };
-          setChatHistory(prev => [...prev, botMessage]);
-        }
-      });
+      chatCompletion({ newChatHistory, setChatHistory, setIsTyping });
     }
   };
 
@@ -71,9 +56,16 @@ export const App = () => {
       </header>
       <div id="chat-container">
         {chatHistory.map((chat, index) => (
-          <ChatBubble key={index} role={chat.role} content={chat.content} isNotification={chat.isNotification} />
+          <ChatBubble
+            key={index}
+            role={chat.role}
+            content={chat.content}
+            isNotification={chat.isNotification}
+          />
         ))}
-        {isTyping && <ChatBubble role="assistant" content="Thinking..." isNotification />}
+        {isTyping && (
+          <ChatBubble role="assistant" content="Thinking..." isNotification />
+        )}
       </div>
       <div id="input-container">
         <textarea
@@ -83,7 +75,9 @@ export const App = () => {
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
         ></textarea>
-        <button id="send-button" onClick={handleSendMessage}>Send</button>
+        <button id="send-button" onClick={handleSendMessage}>
+          Send
+        </button>
       </div>
       {openSettingsModal && <SettingsModal onClose={setOpenSettingsModal} />}
     </div>
