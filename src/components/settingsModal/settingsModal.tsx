@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { ISettings } from "../main";
-import "./components.css";
+import { ISettings } from "../../main";
+import "./settingsModal.css";
 
 export const SettingsModal = ({ onClose }: { onClose: Function }) => {
   const handleModalClick = (e: React.MouseEvent) => {

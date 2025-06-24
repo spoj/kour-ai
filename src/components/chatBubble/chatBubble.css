@@ -1,0 +1,13 @@
+.message {
+  display: flex;
+  margin-bottom: 15px;
+  word-wrap: break-word;
+  hyphens: auto;
+  word-break: break-word;
+  border: 2px solid red;
+}
+.user-message {
+  justify-content: flex-end;
+  align-self: flex-end;
+  max-width: 70%;
+}

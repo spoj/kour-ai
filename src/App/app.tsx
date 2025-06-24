@@ -1,19 +1,24 @@
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
-import { SettingsModal } from "../components";
+import { SettingsModal, IMessage, ChatBubble } from "../components";
 import "./app.css";
 
 export const App = () => {
   const [openSettingsModal, setOpenSettingsModal] = useState(false);
   const [message, setMessage] = useState("");
+  const [history, setHistory] = useState<IMessage[]>([]);
 
   const handleSendMessage = () => {
     console.log("Sending message:", message);
+    setHistory((his) => [
+      ...his,
+      { role: "user", content: message.replace(/\r?\n/g, "<br />") },
+    ]);
     setMessage("");
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
+    if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       handleSendMessage();
     }
@@ -43,17 +48,23 @@ export const App = () => {
           </button>
         </div>
       </header>
-      <div id="chat-container"></div>
-        <div id="input-container">
-          <textarea
-            id="message-input"
-            placeholder="Type a message..."
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-          ></textarea>
-          <button id="send-button" onClick={handleSendMessage}>Send</button>
-        </div>
+      <div id="chat-container">
+        {history.map((m) => (
+          <ChatBubble role={m.role} content={m.content} />
+        ))}
+      </div>
+      <div id="input-container">
+        <textarea
+          id="message-input"
+          placeholder="Type a message..."
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={handleKeyDown}
+        ></textarea>
+        <button id="send-button" onClick={handleSendMessage}>
+          Send
+        </button>
+      </div>
       {openSettingsModal && <SettingsModal onClose={setOpenSettingsModal} />}
     </div>
   );
