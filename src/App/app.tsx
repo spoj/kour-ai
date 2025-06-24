@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { SettingsModal, IMessage, ChatBubble } from "../components";
 import "./app.css";
@@ -9,6 +9,7 @@ export const App = () => {
   const [message, setMessage] = useState("");
   const [chatHistory, setChatHistory] = useState<IMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const handleSendMessage = async () => {
     if (message.trim()) {
@@ -29,6 +30,13 @@ export const App = () => {
       handleSendMessage();
     }
   };
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight;
+    }
+  }, [chatHistory, isTyping]);
 
   return (
     <div className="container">
@@ -54,7 +62,7 @@ export const App = () => {
           </button>
         </div>
       </header>
-      <div id="chat-container">
+      <div id="chat-container" ref={chatContainerRef}>
         {chatHistory.map((chat, index) => (
           <ChatBubble
             key={index}
