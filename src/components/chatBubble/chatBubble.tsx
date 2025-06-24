@@ -1,10 +1,12 @@
 import { IMessage } from "../components";
 import "./chatBubble.css";
 
-export const ChatBubble = ({ role, content }: IMessage) => {
+export const ChatBubble = ({ role, content, isNotification }: IMessage) => {
   return (
-    <div className={`${role}-message message`}>
-      <div className="message-content">{content}</div>
+    <div
+      className={`chat-bubble ${role}-message ${isNotification ? "notification" : ""}`}
+    >
+      <p>{content}</p>
     </div>
   );
 };

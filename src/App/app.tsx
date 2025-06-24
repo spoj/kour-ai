@@ -2,19 +2,25 @@ import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { SettingsModal, IMessage, ChatBubble } from "../components";
 import "./app.css";
+import { chatCompletion } from "../helpers";
 
 export const App = () => {
   const [openSettingsModal, setOpenSettingsModal] = useState(false);
   const [message, setMessage] = useState("");
-  const [history, setHistory] = useState<IMessage[]>([]);
+  const [chatHistory, setChatHistory] = useState<IMessage[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
 
-  const handleSendMessage = () => {
-    console.log("Sending message:", message);
-    setHistory((his) => [
-      ...his,
-      { role: "user", content: message.replace(/\r?\n/g, "<br />") },
-    ]);
-    setMessage("");
+  const handleSendMessage = async () => {
+    if (message.trim()) {
+      const newChatHistory = [
+        ...chatHistory,
+        { role: "user", content: message } as IMessage,
+      ];
+      setChatHistory(newChatHistory);
+      setMessage("");
+
+      chatCompletion({ newChatHistory, setChatHistory, setIsTyping });
+    }
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -49,9 +55,17 @@ export const App = () => {
         </div>
       </header>
       <div id="chat-container">
-        {history.map((m) => (
-          <ChatBubble role={m.role} content={m.content} />
+        {chatHistory.map((chat, index) => (
+          <ChatBubble
+            key={index}
+            role={chat.role}
+            content={chat.content}
+            isNotification={chat.isNotification}
+          />
         ))}
+        {isTyping && (
+          <ChatBubble role="assistant" content="Thinking..." isNotification />
+        )}
       </div>
       <div id="input-container">
         <textarea
