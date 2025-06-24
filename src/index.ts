@@ -70,57 +70,82 @@ ipcMain.on("all-settings-set", (_, val) => {
   store.set("settings", val);
 });
 
-ipcMain.on('chat:completion', async (event, { apiKey, modelName, messages }) => {
-  event.reply('chat:completion-update', { type: 'start', success: true });
-  try {
-    const openai = new OpenAI({
-      apiKey,
-      baseURL: 'https://openrouter.ai/api/v1',
-    });
-
-    let currentMessages = messages.map((m: IChatCompletionMessage) => ({role: m.role, content: m.content}));
-
-    while (true) {
-      const response = await openai.chat.completions.create({
-        model: modelName,
-        messages: currentMessages,
-        tools: tools,
+ipcMain.on(
+  "chat:completion",
+  async (event, { apiKey, modelName, messages }) => {
+    event.reply("chat:completion-update", { type: "start", success: true });
+    try {
+      const openai = new OpenAI({
+        apiKey,
+        baseURL: "https://openrouter.ai/api/v1",
       });
 
-      const responseMessage = response.choices[0].message;
+      let currentMessages = messages.map((m: IChatCompletionMessage) => ({
+        role: m.role,
+        content: m.content,
+      }));
 
-      if (responseMessage.tool_calls) {
-        currentMessages.push(responseMessage);
-        const toolCalls = responseMessage.tool_calls;
-        
-        for (const toolCall of toolCalls) {
-          const functionName = toolCall.function.name;
-          const functionToCall = toolExecutor[functionName];
-          if (functionToCall) {
-            event.reply('chat:completion-update', { type: 'update', success: true, message: `Calling ${functionName}`, isNotification: true });
-            const args = JSON.parse(toolCall.function.arguments);
-            const result = await functionToCall(args);
-            event.reply('chat:completion-update', { type: 'update', success: true, message: `Tool result: ${result}`, isNotification: true });
-            currentMessages.push({
-              tool_call_id: toolCall.id,
-              role: 'tool',
-              name: functionName,
-              content: result,
-            });
+      while (true) {
+        const response = await openai.chat.completions.create({
+          model: modelName,
+          messages: currentMessages,
+          tools: tools,
+        });
+
+        const responseMessage = response.choices[0].message;
+
+        if (responseMessage.tool_calls) {
+          currentMessages.push(responseMessage);
+          const toolCalls = responseMessage.tool_calls;
+
+          for (const toolCall of toolCalls) {
+            const functionName = toolCall.function.name;
+            const functionToCall = toolExecutor[functionName];
+            if (functionToCall) {
+              event.reply("chat:completion-update", {
+                type: "update",
+                success: true,
+                message: `Calling ${functionName}`,
+                isNotification: true,
+              });
+              const args = JSON.parse(toolCall.function.arguments);
+              const result = await functionToCall({ ...args, apiKey });
+              event.reply("chat:completion-update", {
+                type: "update",
+                success: true,
+                message: `Tool result: **Success**`,
+                isNotification: true,
+              });
+              currentMessages.push({
+                tool_call_id: toolCall.id,
+                role: "tool",
+                name: functionName,
+                content: result,
+              });
+            }
           }
+        } else {
+          event.reply("chat:completion-update", {
+            type: "update",
+            success: true,
+            message: responseMessage.content,
+          });
+          break;
         }
-      } else {
-        event.reply('chat:completion-update', { type: 'update', success: true, message: responseMessage.content });
-        break;
       }
+    } catch (error) {
+      console.error(error);
+      event.reply("chat:completion-update", {
+        type: "update",
+        success: false,
+        message:
+          "Sorry, I couldn't connect to the AI. Please check your API key and model name in the settings.",
+      });
+    } finally {
+      event.reply("chat:completion-update", { type: "end", success: true });
     }
-  } catch (error) {
-    console.error(error);
-    event.reply('chat:completion-update', { type: 'update', success: false, message: "Sorry, I couldn't connect to the AI. Please check your API key and model name in the settings." });
-  } finally {
-    event.reply('chat:completion-update', { type: 'end', success: true });
   }
-});
+);
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
