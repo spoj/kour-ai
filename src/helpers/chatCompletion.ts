@@ -17,6 +17,7 @@ export const chatCompletion = ({
     {
       apiKey: settings.apiKey,
       modelName: settings.modelName,
+      rootDir: settings.rootDir,
       messages: newChatHistory.map((m: IMessage) => ({
         role: m.role,
         content: m.content,

@@ -72,7 +72,7 @@ ipcMain.on("all-settings-set", (_, val) => {
 
 ipcMain.on(
   "chat:completion",
-  async (event, { apiKey, modelName, messages }) => {
+  async (event, { apiKey, modelName, rootDir, messages }) => {
     event.reply("chat:completion-update", { type: "start", success: true });
     try {
       const openai = new OpenAI({
@@ -109,7 +109,7 @@ ipcMain.on(
                 isNotification: true,
               });
               const args = JSON.parse(toolCall.function.arguments);
-              const result = await functionToCall({ ...args, apiKey });
+              const result = await functionToCall({ ...args, apiKey, rootDir });
               event.reply("chat:completion-update", {
                 type: "update",
                 success: true,

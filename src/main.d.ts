@@ -8,7 +8,7 @@ export interface ISettings {
 }
 
 export interface IChatCompletionMessage {
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
 }
 
@@ -16,10 +16,11 @@ export interface IChatCompletionOptions {
   apiKey: string;
   modelName: string;
   messages: IChatCompletionMessage[];
+  rootDir: string;
 }
 
 export interface IChatCompletionUpdate {
-  type: 'start' | 'update' | 'end';
+  type: "start" | "update" | "end";
   success: boolean;
   message?: string;
   isNotification?: boolean;
