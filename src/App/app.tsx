@@ -9,6 +9,7 @@ export const App = () => {
   const [message, setMessage] = useState("");
   const [chatHistory, setChatHistory] = useState<IMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [rootDir, setRootDDir] = useState(window.electron.get("rootDir"));
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const handleSendMessage = async () => {
@@ -47,7 +48,15 @@ export const App = () => {
             type="text"
             id="path-input"
             placeholder="Enter root directory..."
+            value={rootDir}
+            onChange={(e) => setRootDDir(e.target.value)}
           />
+          <button
+            id="header-button"
+            onClick={() => window.electron.set("rootDir", rootDir)}
+          >
+            Save
+          </button>
         </div>
         <div style={{ paddingLeft: "10px" }}>
           <button id="header-button" title="Restart Session">

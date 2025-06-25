@@ -27,7 +27,7 @@ h1 {
 }
 #path-container {
   flex-grow: 1;
-  margin: 0 20px;
+  display: flex;
 }
 #path-input {
   width: 100%;
