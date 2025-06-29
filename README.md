@@ -1,3 +1,7 @@
+# Repo moved!
+
+We've moved to [spoj/kour-ai-rs](http://github.com/spoj/kour-ai-rs) after a rewrite and migration to tauri!
+
 # Kour-AI
 
 Your Windows desktop AI assistant for all file lookup, summarising, and instant chat needs.
